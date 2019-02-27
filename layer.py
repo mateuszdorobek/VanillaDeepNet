@@ -31,7 +31,7 @@ class Layer:
         diff = nextDiff * (1/(np.exp(inVec) + np.exp(-inVec)))
         prevDiff = np.dot(self.w.T, diff)
         gw = np.matmul(diff.reshape(self.outputs, 1), x.reshape(1, self.inputs))
-        gb = diff * self.b
+        gb = diff
         self.w -= learnR * gw
         self.b -= learnR * gb
         return prevDiff
@@ -45,16 +45,12 @@ class OutLayer:
         self.outputs = outSize
 
     def teach(self, x, y, learnR):
-        print(x.shape)
-        print(y.shape)
-        print(self.w.shape)
-        print(self.b.shape)
         inVec = np.dot(self.w, x) + self.b
         output = softmax(inVec)
         diff = output - y
         prevDiff = np.dot(self.w.T, diff)
         gw = np.matmul(diff.reshape(self.outputs, 1), x.reshape(1, self.inputs))
-        gb = diff * self.b
+        gb = diff
         self.w -= learnR * gw
         self.b -= learnR * gb
         return prevDiff

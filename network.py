@@ -41,15 +41,15 @@ f[y] = 1
 # output layer
 d_2 = (output - f)
 gw_2 = np.matmul(d_2.reshape(output_size, 1), a_2.reshape(1, layer_size))
-gb_2 = d_2 * b_2
+gb_2 = d_2
 # hidden layer
 d_1 = np.dot(w_2.T, d_2) * (1/(np.exp(i_2) + np.exp(-i_2)))
 gw_1 = np.matmul(d_1.reshape(layer_size, 1), a_1.reshape(1, layer_size))
-gb_1 = d_1 * b_1
+gb_1 = d_1
 # input layer
 d_0 = np.dot(w_1.T, d_1) * (1/(np.exp(i_1) + np.exp(-i_1)))
 gw_0 = np.matmul(d_0.reshape(layer_size, 1), x.reshape(1, input_size))
-gb_0 = d_0 * b_0
+gb_0 = d_0
 # update weights
 learing_rate = 0.1
 w_0 = w_0 - learing_rate * gw_0
