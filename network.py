@@ -22,8 +22,8 @@ b_1 = (np.random.rand(layer_size, 1) / layer_size)[:, 0]
 b_2 = (np.random.rand(output_size, 1) / layer_size)[:, 0]
 
 # %% Normalize
-x = X[3]
-y = int(Y[3])
+x = X[9]
+y = int(Y[9])
 x = x / 255.0
 
 # %% Feed-forward
@@ -71,4 +71,11 @@ def cost_fun(x, y) -> float:
     network = layer.Layer(2, input_size, layer_size, output_size)
     f = np.zeros(output_size)
     f[y] = 1
+    print(network.classify(x))
     network.teach(x, f, 0.1)
+    print(network.classify(x))
+    network.teach(x, f, 0.1)
+    print(network.classify(x))
+    network.teach(x, f, 0.1)
+    print(network.classify(x))
+    print(np.argmax(network.classify(x)))

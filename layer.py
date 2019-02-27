@@ -23,8 +23,6 @@ class Layer:
             self.nextLayer = OutLayer(layerSize, outSize)
 
     def teach(self, x, y, learnR):
-#        print(self.w.shape)
-#        print(self.b.shape)
         inVec = np.dot(self.w, x) + self.b
         output = np.tanh(inVec)
         nextDiff = self.nextLayer.teach(output, y, learnR)
@@ -35,6 +33,11 @@ class Layer:
         self.w -= learnR * gw
         self.b -= learnR * gb
         return prevDiff
+
+    def classify(self, x):
+        inVec = np.dot(self.w, x) + self.b
+        output = np.tanh(inVec)
+        return self.nextLayer.classify(output)
 
 
 class OutLayer:
@@ -54,3 +57,7 @@ class OutLayer:
         self.w -= learnR * gw
         self.b -= learnR * gb
         return prevDiff
+
+    def classify(self, x):
+        inVec = np.dot(self.w, x) + self.b
+        return softmax(inVec)
