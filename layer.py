@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import copy
 
 
 def softmax(x) -> np.ndarray:
@@ -72,7 +73,27 @@ class Layer:
 
     def cost_fun(self, a_in, t):
         classification = self.classify(a_in)
-        return np.log(np.dot(classification.T, t))
+        return - np.log(np.dot(classification.T, t).item())
+
+    def check_next_grad(self, a_in, t):
+        z = self.w.T @ a_in + self.b
+        a_out = np.tanh(z)
+        self.nextLayer.check_gradient(a_out,t)
+
+    def check_gradient(self, a_in, t):
+        prev_gw = copy.copy(self.gw) # Copying it is an ugly hack, but it's only debug module
+        self.teach(a_in, t)
+        curr_gw = self.gw - prev_gw
+        eps = 0.05
+        eps_arr = np.full_like(self.gw, 0)
+        eps_arr[0, 0] = eps
+        self.w += eps_arr
+        up_cost = self.cost_fun(a_in, t)
+        self.w -= 2*eps_arr
+        down_cost = self.cost_fun(a_in, t)
+        self.w += eps_arr
+        numerical_grad = (up_cost - down_cost) / (2*eps)
+        print(f"numerical grad = {numerical_grad}, backpropagated = {curr_gw[0,0]}")
 
 
 class OutLayer:

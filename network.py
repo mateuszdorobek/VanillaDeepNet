@@ -47,9 +47,9 @@ if __name__ == "__main__":
 # %% Training
     x_example, y_example = get_example(X_train, y_train)
     t = one_hot(y_example, output_size=digits_nr)
-    network = layer.Layer(hidden_layers=3,
+    network = layer.Layer(hidden_layers=4,
                           input_size=X_train.shape[1],
-                          layer_size=100,
+                          layer_size=10,
                           output_size=digits_nr,
                           learning_rate=0.01)
     print("Training Loop:")
@@ -60,6 +60,7 @@ if __name__ == "__main__":
             x = np.array([X_train[i]]).T
             network.teach(x, t)
             print(f"cost = {network.cost_fun(x, t)}")
+            network.check_next_grad(x, t)
         network.apply_gradients()
 
     x = np.array([X_train[0]]).T
