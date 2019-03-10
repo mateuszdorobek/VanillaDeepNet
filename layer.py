@@ -7,7 +7,7 @@ def softmax(x) -> np.ndarray:
     z = x - max(x)
     numerator = np.exp(z)
     denominator = np.sum(numerator)
-    return numerator/denominator
+    return numerator / denominator
 
 
 def d_tanh(x) -> np.ndarray:
@@ -39,7 +39,7 @@ class Layer:
         else:
             self.nextLayer = OutLayer(layer_size, output_size, learning_rate)
 
-    def teach(self, a_in, t):
+    def teach(self, a_in, t) -> np.ndarray:
         z = self.w.T @ a_in + self.b
         a_out = np.tanh(z)
         next_diff = self.nextLayer.teach(a_out, t)
@@ -48,22 +48,11 @@ class Layer:
         gb = diff
         self.gw += gw
         self.gb += gb
-        # print(f"a{a_in.shape}, "
-        #       f"w{self.w.shape}, "
-        #       f"gw{gw.shape}, "
-        #       f"b{self.b.shape}, "
-        #       f"gb{gb.shape}, "
-        #       f"diff{diff.shape}, "
-        #       f"next_diff{next_diff.shape}")
         return diff
 
-    def classify(self, a_in):
+    def classify(self, a_in) -> np.ndarray:
         z = self.w.T @ a_in + self.b
         a_out = np.tanh(z)
-        # print(f"z{z.shape}"
-        #       f"w{self.w.shape}"
-        #       f"b{self.b.shape}"
-        #       f"a_in{a_in.shape}")
         return self.nextLayer.classify(a_out)
 
     def apply_gradients(self):
@@ -71,17 +60,17 @@ class Layer:
         self.b -= self.gb * self.learning_rate
         self.nextLayer.apply_gradients()
 
-    def cost_fun(self, a_in, t):
+    def cost_fun(self, a_in, t) -> float:
         classification = self.classify(a_in)
-        return - np.log(np.dot(classification.T, t).item())
+        return - np.log(classification.T @ t).item()
 
     def check_next_grad(self, a_in, t):
         z = self.w.T @ a_in + self.b
         a_out = np.tanh(z)
-        self.nextLayer.check_gradient(a_out,t)
+        self.nextLayer.check_gradient(a_out, t)
 
     def check_gradient(self, a_in, t):
-        prev_gw = copy.copy(self.gw) # Copying it is an ugly hack, but it's only debug module
+        prev_gw = copy.copy(self.gw)  # Copying it is an ugly hack, but it's only debug module
         self.teach(a_in, t)
         curr_gw = self.gw - prev_gw
         eps = 0.05
@@ -89,11 +78,11 @@ class Layer:
         eps_arr[0, 0] = eps
         self.w += eps_arr
         up_cost = self.cost_fun(a_in, t)
-        self.w -= 2*eps_arr
+        self.w -= 2 * eps_arr
         down_cost = self.cost_fun(a_in, t)
         self.w += eps_arr
-        numerical_grad = (up_cost - down_cost) / (2*eps)
-        print(f"numerical grad = {numerical_grad}, backpropagated = {curr_gw[0,0]}")
+        numerical_grad = (up_cost - down_cost) / (2 * eps)
+        print(f"numerical grad = {numerical_grad}, backpropagated = {curr_gw[0, 0]}")
 
 
 class OutLayer:
@@ -104,27 +93,17 @@ class OutLayer:
         self.gw = 0.0
         self.gb = 0.0
 
-    def teach(self, a_in, t):
+    def teach(self, a_in, t) -> np.ndarray:
         z = self.w.T @ a_in + self.b
         a_out = softmax(z)
         diff = a_out - t
-        # print(f"diff{sum(diff)}")
         gw = a_in @ diff.T
         gb = diff
         self.gw += gw
         self.gb += gb
-        # print(f" w{self.w.shape}, "
-        #       f"a{a_in.shape}, "
-        #       f"b{self.b.shape}, "
-        #       f"t{t.shape}, "
-        #       f"z{z.shape}, "
-        #       f"a_out{a_out.shape}, "
-        #       f"diff{diff.shape}, "
-        #       f"gw{gw.shape}, "
-        #       f"gb{gb.shape}")
         return diff
 
-    def classify(self, a_in):
+    def classify(self, a_in) -> np.ndarray:
         z = self.w.T @ a_in + self.b
         # print(f"z{z.shape}"
         #       f"w{self.w.shape}"
