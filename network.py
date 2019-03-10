@@ -2,100 +2,67 @@
 import math
 import numpy as np
 import pandas as pd
+import layer
 from sklearn.datasets import fetch_openml
-
-# %% Download Data
-X, Y = fetch_openml('mnist_784', version=1, return_X_y=True)
+from sklearn.model_selection import train_test_split
 
 
-# %% Initialize params
-input_size = X.shape[1]
-layer_size = 5
-output_size = 10
-
-w_0 = np.random.rand(layer_size, input_size) / layer_size
-w_1 = np.random.rand(layer_size, layer_size) / layer_size
-w_2 = np.random.rand(output_size, layer_size) / layer_size
-b_0 = (np.random.rand(layer_size, 1) / layer_size)[:, 0]
-b_1 = (np.random.rand(layer_size, 1) / layer_size)[:, 0]
-b_2 = (np.random.rand(output_size, 1) / layer_size)[:, 0]
-
-# %% Normalize
-x = X[3]
-y = int(Y[3])
-x = x / 255.0
-
-# %% Feed-forward
-i_1 = np.dot(w_0, x) + b_0
-a_1 = np.tanh(i_1)
-i_2 = np.dot(w_1, a_1) + b_1
-a_2 = np.tanh(i_2)
-output = softmax(np.dot(w_2, a_2) + b_2)
-print(f"Predicted digit: {np.argmax(output)}")
-
-# %% Backpropagation
-# f is expected output
-f = np.zeros(output_size)
-f[y] = 1
-# output layer
-d_2 = (output - f)
-gw_2 = np.matmul(d_2.reshape(output_size, 1), a_2.reshape(1, layer_size))
-gb_2 = d_2 * b_2
-# hidden layer
-d_1 = np.dot(w_2.T, d_2) * (1/(np.exp(i_2) + np.exp(-i_2)))
-gw_1 = np.matmul(d_1.reshape(layer_size, 1), a_1.reshape(1, layer_size))
-gb_1 = d_1 * b_1
-# input layer
-d_0 = np.dot(w_1.T, d_1) * (1/(np.exp(i_1) + np.exp(-i_1)))
-gw_0 = np.matmul(d_0.reshape(layer_size, 1), x.reshape(1, input_size))
-gb_0 = d_0 * b_0
-# update weights
-learing_rate = 0.1
-w_0 = w_0 - learing_rate * gw_0
-b_0 = b_0 - learing_rate * gb_0
-w_1 = w_1 - learing_rate * gw_1
-b_1 = b_1 - learing_rate * gb_1
-w_2 = w_2 - learing_rate * gw_2
-b_2 = b_2 - learing_rate * gb_2
-
-# %% Defs
-def softmax(x) -> np.ndarray:
-    return np.exp(x) / sum(np.exp(x))
+def load_mnist():
+    print("Loading data...")
+    # x, y = fetch_openml('mnist_784', version=1, return_X_y=True)
+    mnist = fetch_openml('mnist_784', cache=False)
+    x = mnist.data.astype('float32')
+    y = mnist.target.astype('int64')
+    x /= 255.0
+    X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.20, random_state=17)
+    assert (X_train.shape[0] + X_test.shape[0] == mnist.data.shape[0])
+    print("done")
+    return X_train, X_test, y_train, y_test
 
 
-def cost_fun(x, y) -> float:
-    return sum(x * math.log(y))
+def load_sample_data():
+    x = np.random.rand(110, 3) * 255.0
+    y = np.asarray([np.random.randint(0, 9, 110)]).T
+    X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.20, random_state=17)
+    return X_train, X_test, y_train, y_test
 
-# %% Test
-for i in range(10):
-    i_1 = np.dot(w_0, x) + b_0
-    a_1 = np.tanh(i_1)
-    i_2 = np.dot(w_1, a_1) + b_1
-    a_2 = np.tanh(i_2)
-    output = softmax(np.dot(w_2, a_2) + b_2)
-    print(output)
-    print(f"Predicted digit: {np.argmax(output)}")
 
-    # f is expected output
-    f = np.zeros(output_size)
-    f[y] = 1
-    # output layer
-    d_2 = (output - f)
-    gw_2 = np.matmul(d_2.reshape(output_size, 1), a_2.reshape(1, layer_size))
-    gb_2 = d_2 * b_2
-    # hidden layer
-    d_1 = np.dot(w_2.T, d_2) * (1/(np.exp(i_2) + np.exp(-i_2)))
-    gw_1 = np.matmul(d_1.reshape(layer_size, 1), a_1.reshape(1, layer_size))
-    gb_1 = d_1 * b_1
-    # input layer
-    d_0 = np.dot(w_1.T, d_1) * (1/(np.exp(i_1) + np.exp(-i_1)))
-    gw_0 = np.matmul(d_0.reshape(layer_size, 1), x.reshape(1, input_size))
-    gb_0 = d_0 * b_0
-    # update weights
-    learing_rate = 0.1
-    w_0 = w_0 - learing_rate * gw_0
-    b_0 = b_0 - learing_rate * gb_0
-    w_1 = w_1 - learing_rate * gw_1
-    b_1 = b_1 - learing_rate * gb_1
-    w_2 = w_2 - learing_rate * gw_2
-    b_2 = b_2 - learing_rate * gb_2
+def get_example(X, Y):
+    x = np.array([X[0]]).T
+    y = int(Y[0])
+    x = x / 255.0
+    return x, y
+
+
+def one_hot(y, output_size):
+    t = np.array([np.zeros(output_size)]).T
+    t[y] = 1
+    return t
+
+# %% main
+if __name__ == "__main__":
+
+    digits_nr = 10
+    X_train, X_test, y_train, y_test = load_sample_data()
+# %% Training
+    x_example, y_example = get_example(X_train, y_train)
+    t = one_hot(y_example, output_size=digits_nr)
+    network = layer.Layer(hidden_layers=4,
+                          input_size=X_train.shape[1],
+                          layer_size=10,
+                          output_size=digits_nr,
+                          learning_rate=0.01)
+    print("Training Loop:")
+    for epoch in range(10):
+        print(f"epoch: {epoch}")
+        for i in range(X_train.shape[0]):
+            t = one_hot(y_train[i], output_size=digits_nr)
+            x = np.array([X_train[i]]).T
+            network.teach(x, t)
+            print(f"cost = {network.cost_fun(x, t)}")
+            network.check_next_grad(x, t)
+        network.apply_gradients()
+
+    x = np.array([X_train[0]]).T
+    print(network.classify(x))
+    print(y_train[0])
