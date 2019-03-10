@@ -1,10 +1,13 @@
 import math
 import numpy as np
+import copy
 
 
 def softmax(x) -> np.ndarray:
-    exps = np.exp(x)
-    return exps / np.sum(exps)
+    z = x - max(x)
+    numerator = np.exp(z)
+    denominator = np.sum(numerator)
+    return numerator/denominator
 
 
 def d_tanh(x) -> np.ndarray:
@@ -68,6 +71,30 @@ class Layer:
         self.b -= self.gb * self.learning_rate
         self.nextLayer.apply_gradients()
 
+    def cost_fun(self, a_in, t):
+        classification = self.classify(a_in)
+        return - np.log(np.dot(classification.T, t).item())
+
+    def check_next_grad(self, a_in, t):
+        z = self.w.T @ a_in + self.b
+        a_out = np.tanh(z)
+        self.nextLayer.check_gradient(a_out,t)
+
+    def check_gradient(self, a_in, t):
+        prev_gw = copy.copy(self.gw) # Copying it is an ugly hack, but it's only debug module
+        self.teach(a_in, t)
+        curr_gw = self.gw - prev_gw
+        eps = 0.05
+        eps_arr = np.full_like(self.gw, 0)
+        eps_arr[0, 0] = eps
+        self.w += eps_arr
+        up_cost = self.cost_fun(a_in, t)
+        self.w -= 2*eps_arr
+        down_cost = self.cost_fun(a_in, t)
+        self.w += eps_arr
+        numerical_grad = (up_cost - down_cost) / (2*eps)
+        print(f"numerical grad = {numerical_grad}, backpropagated = {curr_gw[0,0]}")
+
 
 class OutLayer:
     def __init__(self, in_size, layer_size, learning_rate):
@@ -81,7 +108,7 @@ class OutLayer:
         z = self.w.T @ a_in + self.b
         a_out = softmax(z)
         diff = a_out - t
-        print(f"diff{sum(diff)}")
+        # print(f"diff{sum(diff)}")
         gw = a_in @ diff.T
         gb = diff
         self.gw += gw
@@ -105,7 +132,7 @@ class OutLayer:
         #       f"a_in{a_in.shape}")
         # attrs = vars(self)
         # print(', \n'.join("%s: %s" % item for item in attrs.items()))
-        return np.argmax(softmax(z))
+        return softmax(z)
 
     def apply_gradients(self):
         self.w -= self.gw * self.learning_rate
