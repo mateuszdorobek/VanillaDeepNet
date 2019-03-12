@@ -11,11 +11,7 @@ def softmax(x) -> np.ndarray:
 
 
 def d_tanh(x) -> np.ndarray:
-    return 1 - np.tanh(x) ** 2
-
-
-def cost_fun(x, y) -> float:
-    return sum(x * math.log(y))
+    return 1 - (np.tanh(x) ** 2)
 
 
 def initialize_wages(in_size, layer_size) -> np.ndarray:
@@ -31,8 +27,8 @@ class Layer:
         self.learning_rate = learning_rate
         self.w = initialize_wages(input_size, layer_size)
         self.b = initialize_bias(layer_size)
-        self.gw = 0.0
-        self.gb = 0.0
+        self.gw = np.zeros_like(self.w)
+        self.gb = np.zeros_like(self.b)
         hidden_layers -= 1
         if hidden_layers > 0:
             self.nextLayer = Layer(hidden_layers - 1, layer_size, layer_size, output_size, learning_rate)
@@ -59,12 +55,16 @@ class Layer:
         self.w -= self.gw * self.learning_rate
         self.b -= self.gb * self.learning_rate
         self.nextLayer.apply_gradients()
-        self.gw = 0.0
-        self.gb = 0.0
+        self.gw = np.zeros_like(self.w)
+        self.gb = np.zeros_like(self.b)
 
     def cost_fun(self, a_in, t) -> float:
         classification = self.classify(a_in)
-        return - np.log(classification.T @ t).item()
+        for i in range(0, len(t)):
+            if t[i] == 1:
+                return -np.log(classification[i])
+        # return - (np.log(classification).T@t).item()
+        # macierzowo
 
     def check_nth_grad(self, a_in, t, n):
         n -= 1
@@ -107,8 +107,8 @@ class OutLayer:
         self.learning_rate = learning_rate
         self.w = initialize_wages(in_size, layer_size)
         self.b = initialize_bias(layer_size)
-        self.gw = 0.0
-        self.gb = 0.0
+        self.gw = np.zeros_like(self.w)
+        self.gb = np.zeros_like(self.b)
 
     def teach(self, a_in, t) -> np.ndarray:
         z = self.w.T @ a_in + self.b
@@ -122,14 +122,11 @@ class OutLayer:
 
     def classify(self, a_in) -> np.ndarray:
         z = self.w.T @ a_in + self.b
-        # print(f"z{z.shape}"
-        #       f"w{self.w.shape}"
-        #       f"b{self.b.shape}"
-        #       f"a_in{a_in.shape}")
-        # attrs = vars(self)
-        # print(', \n'.join("%s: %s" % item for item in attrs.items()))
-        return softmax(z)
+        a_out = softmax(z)
+        return a_out
 
     def apply_gradients(self):
         self.w -= self.gw * self.learning_rate
         self.b -= self.gb * self.learning_rate
+        self.gw = np.zeros_like(self.w)
+        self.gb = np.zeros_like(self.b)
