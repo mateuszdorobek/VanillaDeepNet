@@ -66,26 +66,40 @@ class Layer:
         # return - (np.log(classification).T@t).item()
         # macierzowo
 
-    def check_next_grad(self, a_in, t):
-        z = self.w.T @ a_in + self.b
-        a_out = np.tanh(z)
-        return self.nextLayer.check_gradient(a_out, t)
+    def check_nth_grad(self, a_in, t, n):
+        n -= 1
+        if n <= 0:
+            self.check_gradient(a_in, t)
+        else:
+            z = self.w.T @ a_in + self.b
+            a_out = np.tanh(z)
+            self.nextLayer.check_nth_grad(a_out, t, n)
 
     def check_gradient(self, a_in, t):
         prev_gw = copy.copy(self.gw)  # Copying it is an ugly hack, but it's only debug module
+        prev_gb = copy.copy(self.gb)
+        numerical_grad = np.empty_like(self.w)
+        # Calculate gradient with backpropagation
         self.teach(a_in, t)
         curr_gw = self.gw - prev_gw
+        # Calculate numerical gradient
         eps = 0.05
         eps_arr = np.full_like(self.gw, 0)
-        eps_arr[0, 0] = eps
-        self.w += eps_arr
-        up_cost = self.cost_fun(a_in, t)
-        self.w -= 2 * eps_arr
-        down_cost = self.cost_fun(a_in, t)
-        self.w += eps_arr
-        numerical_grad = (up_cost - down_cost) / (2 * eps)
-        print(f"numerical grad = {numerical_grad}, backpropagated = {curr_gw[0, 0]}")
-        return curr_gw[0, 0]
+        for i in range(self.w.shape[0]):
+            for j in range(self.w.shape[1]):
+                eps_arr[i, j] = eps
+                self.w += eps_arr
+                up_cost = self.cost_fun(a_in, t)
+                self.w -= 2 * eps_arr
+                down_cost = self.cost_fun(a_in, t)
+                self.w += eps_arr
+                numerical_grad[i, j] = (up_cost - down_cost) / (2 * eps)
+                eps_arr[i, j] = 0
+        # print(f"numerical grad = {numerical_grad} \n backpropagated = {curr_gw}")
+        print(f"mean error = {np.sum(numerical_grad - curr_gw) / numerical_grad.size}")
+        # Undo changes done in teach
+        self.gw = prev_gw
+        self.gb = prev_gb
 
 
 class OutLayer:
