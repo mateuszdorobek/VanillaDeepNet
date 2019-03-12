@@ -64,10 +64,14 @@ class Layer:
         classification = self.classify(a_in)
         return - np.log(classification.T @ t).item()
 
-    def check_next_grad(self, a_in, t):
-        z = self.w.T @ a_in + self.b
-        a_out = np.tanh(z)
-        self.nextLayer.check_gradient(a_out, t)
+    def check_nth_grad(self, a_in, t, n):
+        n -= 1
+        if n <= 0:
+            self.check_gradient(a_in, t)
+        else:
+            z = self.w.T @ a_in + self.b
+            a_out = np.tanh(z)
+            self.nextLayer.check_nth_grad(a_out, t, n)
 
     def check_gradient(self, a_in, t):
         prev_gw = copy.copy(self.gw)  # Copying it is an ugly hack, but it's only debug module
