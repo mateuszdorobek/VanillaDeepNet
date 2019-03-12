@@ -59,6 +59,8 @@ class Layer:
         self.w -= self.gw * self.learning_rate
         self.b -= self.gb * self.learning_rate
         self.nextLayer.apply_gradients()
+        self.gw = 0.0
+        self.gb = 0.0
 
     def cost_fun(self, a_in, t) -> float:
         classification = self.classify(a_in)
@@ -93,11 +95,11 @@ class Layer:
                 self.w += eps_arr
                 numerical_grad[i, j] = (up_cost - down_cost) / (2 * eps)
                 eps_arr[i, j] = 0
-        print(f"numerical grad = {numerical_grad}, backpropagated = {curr_gw[0, 0]}")
+        # print(f"numerical grad = {numerical_grad} \n backpropagated = {curr_gw}")
+        print(f"mean error = {np.sum(numerical_grad - curr_gw) / numerical_grad.size}")
         # Undo changes done in teach
         self.gw = prev_gw
         self.gb = prev_gb
-
 
 
 class OutLayer:
