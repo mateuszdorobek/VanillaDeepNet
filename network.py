@@ -35,7 +35,7 @@ if __name__ == "__main__":
     x_check_cost = X_train
     y_check_cost = y_train
     print("Training Loop:")
-    epochs = 50
+    epochs = 25
     loss_values = []
     for epoch in range(epochs):
         print(f"epoch: {epoch}")
@@ -43,8 +43,6 @@ if __name__ == "__main__":
             t = one_hot(y_train[i], output_size=digits_nr)
             x = np.array([X_train[i]]).T
             network.teach(x, t)
-            # print(f"cost = {network.cost_fun(x, t)}")
-            network.check_next_grad(x, t)
             network.cost_fun(x, t)
             network.apply_gradients()
         mean_loss = 0.0

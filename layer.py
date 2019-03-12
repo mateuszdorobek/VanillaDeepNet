@@ -29,6 +29,15 @@ class Layer:
         self.b = initialize_bias(layer_size)
         self.gw = np.zeros_like(self.w)
         self.gb = np.zeros_like(self.b)
+        # Adam members
+        self.beta1 = 0.9
+        self.beta2 = 0.99
+        self.eps = 0.00000001
+        self.mw = np.zeros_like(self.w)
+        self.mb = np.zeros_like(self.b)
+        self.vw = np.zeros_like(self.w)
+        self.vb = np.zeros_like(self.b)
+
         hidden_layers -= 1
         if hidden_layers > 0:
             self.nextLayer = Layer(hidden_layers - 1, layer_size, layer_size, output_size, learning_rate)
@@ -52,8 +61,19 @@ class Layer:
         return self.nextLayer.classify(a_out)
 
     def apply_gradients(self):
-        self.w -= self.gw * self.learning_rate
-        self.b -= self.gb * self.learning_rate
+        # Uses Adam algorithm
+        self.mw = self.beta1 * self.mw + (1 - self.beta1) * self.gw
+        self.mb = self.beta1 * self.mb + (1 - self.beta1) * self.gb
+        self.vw = self.beta2 * self.vw + (1 - self.beta2) * np.power(self.gw, 2)
+        self.vb = self.beta2 * self.vb + (1 - self.beta2) * np.power(self.gb, 2)
+        mw_dash = self.mw / (1 - self.beta1)
+        mb_dash = self.mb / (1 - self.beta1)
+        vw_dash = self.vw / (1 - self.beta2)
+        vb_dash = self.vb / (1 - self.beta2)
+        self.w -= self.learning_rate * mw_dash / (vw_dash + self.eps)
+        self.b -= self.learning_rate * mb_dash / (vb_dash + self.eps)
+        # self.w -= self.learning_rate * self.gw
+        # self.b -= self.learning_rate * self.gb
         self.nextLayer.apply_gradients()
         self.gw = np.zeros_like(self.w)
         self.gb = np.zeros_like(self.b)
@@ -109,6 +129,14 @@ class OutLayer:
         self.b = initialize_bias(layer_size)
         self.gw = np.zeros_like(self.w)
         self.gb = np.zeros_like(self.b)
+        # Adam members
+        self.beta1 = 0.9
+        self.beta2 = 0.99
+        self.eps = 0.00000001
+        self.mw = np.zeros_like(self.w)
+        self.mb = np.zeros_like(self.b)
+        self.vw = np.zeros_like(self.w)
+        self.vb = np.zeros_like(self.b)
 
     def teach(self, a_in, t) -> np.ndarray:
         z = self.w.T @ a_in + self.b
@@ -126,7 +154,18 @@ class OutLayer:
         return a_out
 
     def apply_gradients(self):
-        self.w -= self.gw * self.learning_rate
-        self.b -= self.gb * self.learning_rate
+        # Uses Adam algorithm
+        self.mw = self.beta1 * self.mw + (1 - self.beta1) * self.gw
+        self.mb = self.beta1 * self.mb + (1 - self.beta1) * self.gb
+        self.vw = self.beta2 * self.vw + (1 - self.beta2) * np.power(self.gw, 2)
+        self.vb = self.beta2 * self.vb + (1 - self.beta2) * np.power(self.gb, 2)
+        mw_dash = self.mw / (1 - self.beta1)
+        mb_dash = self.mb / (1 - self.beta1)
+        vw_dash = self.vw / (1 - self.beta2)
+        vb_dash = self.vb / (1 - self.beta2)
+        self.w -= self.learning_rate * mw_dash / (vw_dash + self.eps)
+        self.b -= self.learning_rate * mb_dash / (vb_dash + self.eps)
+        # self.w -= self.gw * self.learning_rate
+        # self.b -= self.gb * self.learning_rate
         self.gw = np.zeros_like(self.w)
         self.gb = np.zeros_like(self.b)
