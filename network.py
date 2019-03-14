@@ -1,7 +1,9 @@
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 import layer
+import copy
 from sklearn.datasets import fetch_openml
 from sklearn.model_selection import train_test_split
 from imgaug import augmenters as iaa
@@ -12,8 +14,8 @@ batch_size = 64
 learning_rate = 0.005
 layer_size = 64
 hidden_layers = 2
-augment_times = 4
-init_type = "Xavier"
+augment_times = 8
+init_type = "Default"
 
 
 def load_mnist():
@@ -93,7 +95,18 @@ def unpickle_mnist():
     return X_train[0:1000], X_test, y_train[0:1000], y_test
 
 
+def confusion_matrix(network, X, y):
+    y_pred = pd.Series(copy.copy(y), dtype=int, name="Predicted") # copying y works as prealocation
+    for i in range(X.shape[0]):
+        x = np.array([X[i]]).T
+        predicted = np.argmax(network.classify(x))
+        y_pred.set_value(i, predicted)
+    y_actu = pd.Series(y, name="Actual")
+    return pd.crosstab(y_actu, y_pred)
+
+
 def check_accuracy(network, X_test, y_test):
+    # Code duplication, yet it does not copy memory, hence it it's faster
     true_positive_counter = 0.0
     for i in range(X_test.shape[0]):
         x = np.array([X_test[i]]).T
@@ -121,6 +134,10 @@ if __name__ == "__main__":
     test_loss_values = []
     accuracy = []
     loss_values = []
+
+    hehe = confusion_matrix(network, X_test, y_test)
+    print(type(hehe))
+
     for epoch in range(epochs):
         print(f"epoch: {epoch + 1}")
         for i in range(X_train.shape[0]):
@@ -138,6 +155,7 @@ if __name__ == "__main__":
     print(f"train loss: {train_loss_values[-1].item()}")
     print(f"test loss: {test_loss_values[-1].item()}")
     print(f"accuracy: {accuracy[-1]}")
+    print(f"confusion matrix:\n{confusion_matrix(network, X_test, y_test)}")
 
     plt.subplot(211)
     plt.plot(train_loss_values, linestyle='-.', label='training')
