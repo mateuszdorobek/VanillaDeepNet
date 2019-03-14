@@ -12,9 +12,9 @@ digits_nr = 10
 epochs = 100
 batch_size = 64
 learning_rate = 0.005
-layer_size = 64
-hidden_layers = 2
-augment_times = 8
+layer_size = 128
+hidden_layers = 3
+augment_times = 4
 stop_threshold = 3
 init_type = "Default"
 
@@ -93,7 +93,7 @@ def unpickle_mnist():
     x /= 255.0
     X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.20, random_state=17)
     assert (X_train.shape[0] + X_test.shape[0] == mnist.data.shape[0])
-    return X_train[0:1000], X_test, y_train[0:1000], y_test
+    return X_train[0:4000], X_test, y_train[0:4000], y_test
 
 
 def confusion_matrix(network, X, y):
@@ -154,6 +154,7 @@ if __name__ == "__main__":
         if prev_loss < test_loss:
             loss_rise_count += 1
             if loss_rise_count >= stop_threshold:
+                print(f"Stopping because of reaching criterion in {epoch} epoch.")
                 break
         else:
             best_network = copy.deepcopy(network)
