@@ -8,10 +8,11 @@ from imgaug import augmenters as iaa
 
 digits_nr = 10
 epochs = 10
-batch_size = 128
+batch_size = 64
 learning_rate = 0.005
-layer_size = 128
+layer_size = 64
 hidden_layers = 2
+augment_times = 4
 init_type = "Xavier"
 
 
@@ -51,6 +52,7 @@ def pickle_mnist():
     pickling_on.close()
     print("Pickling done")
 
+
 seq = iaa.Sequential([
     # Scale/zoom them, translate/move them, rotate them and shear them.
     iaa.Affine(
@@ -62,22 +64,22 @@ seq = iaa.Sequential([
 ])
 
 
-def augment(x, img_shape):
-    assert (x.shape[1] == img_shape[0] * img_shape[1])
-    x_arr = x.reshape(x.shape[0], img_shape[0], img_shape[1])
-    x_aug = seq.augment_images(x_arr)
-    # plt.imshow(x_aug[0])
-    # plt.show()
-    return x_aug.reshape(x_aug.shape[0], img_shape[0] * img_shape[1])
+def augment(X, y, img_shape, augment_times) -> (np.ndarray, np.ndarray):
+    assert (X.shape[1] == img_shape[0] * img_shape[1])
+    X_augmented = np.empty((X.shape[0] * augment_times, X.shape[1]))
+    X_augmented[0:X.shape[0], :] = X
+    y_augmented = np.empty((y.shape[0] * augment_times), dtype=int)
+    y_augmented[0:y.shape[0]] = y
+    X_arr = X.reshape(X.shape[0], img_shape[0], img_shape[1])
+    for i in range(1, augment_times):
+        X_aug_arr = seq.augment_images(X_arr)
+        X_aug_vec = X_aug_arr.reshape(X_aug_arr.shape[0], img_shape[0] * img_shape[1])
+        # X_augmented.append(X_aug_vec)
+        # y_augmented.append(y)
+        X_augmented[i * X.shape[0]: (i+1) * X.shape[0], :] = X_aug_vec
+        y_augmented[i * y.shape[0]: (i+1) * y.shape[0]] = y
+    return X_augmented, y_augmented
 
-
-# %%
-X_train, X_test, y_train, y_test = load_mnist()
-# %%
-tmp = augment(X_train, (28, 28))
-# %%
-
-if __name__ == "__main__":
 
 def unpickle_mnist():
     pickle_off = open("mnist.pickle", "rb")
@@ -104,9 +106,10 @@ if __name__ == "__main__":
     # if you want to perform loading data faster pickle database first
     # and then use pickled binary file (unpickle_mnist)
     # pickle_mnist()
-    # X_train, X_test, y_train, y_test = unpickle_mnist()
+    X_train, X_test, y_train, y_test = unpickle_mnist()
     # plt.imshow(X_train[0].reshape(28, 28))
-    X_train, X_test, y_train, y_test = load_mnist()
+    # X_train, X_test, y_train, y_test = load_mnist()
+    X_train, y_train = augment(X_train, y_train, (28, 28), augment_times)
     network = layer.Layer(hidden_layers=hidden_layers,
                           input_size=X_train.shape[1],
                           layer_size=layer_size,
@@ -114,8 +117,6 @@ if __name__ == "__main__":
                           learning_rate=learning_rate,
                           init_type=init_type)
     print("Training Loop:")
-    epochs = 25
-    batch_size = 16
     train_loss_values = []
     test_loss_values = []
     accuracy = []
@@ -126,9 +127,6 @@ if __name__ == "__main__":
             t = one_hot(y_train[i], output_size=digits_nr)
             x = np.array([X_train[i]]).T
             network.teach(x, t)
-            # print(f"cost = {network.cost_fun(x, t)}")
-            # network.check_next_grad(x, t)
-            network.cost_fun(x, t)
             if (i + 1) % batch_size == 0:
                 network.apply_gradients()
         train_loss_values.append(check_loss(network, X_train, y_train))
