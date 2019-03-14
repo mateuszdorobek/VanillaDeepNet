@@ -9,12 +9,13 @@ from sklearn.model_selection import train_test_split
 from imgaug import augmenters as iaa
 
 digits_nr = 10
-epochs = 10
+epochs = 100
 batch_size = 64
 learning_rate = 0.005
 layer_size = 64
 hidden_layers = 2
 augment_times = 8
+stop_threshold = 3
 init_type = "Default"
 
 
@@ -134,9 +135,9 @@ if __name__ == "__main__":
     test_loss_values = []
     accuracy = []
     loss_values = []
-
-    hehe = confusion_matrix(network, X_test, y_test)
-    print(type(hehe))
+    prev_loss = float("inf")
+    loss_rise_count = 0
+    best_network = copy.deepcopy(network)
 
     for epoch in range(epochs):
         print(f"epoch: {epoch + 1}")
@@ -147,8 +148,17 @@ if __name__ == "__main__":
             if (i + 1) % batch_size == 0:
                 network.apply_gradients()
         train_loss_values.append(check_loss(network, X_train, y_train))
-        test_loss_values.append(check_loss(network, X_test, y_test))
+        test_loss = check_loss(network, X_test, y_test)
+        test_loss_values.append(test_loss)
         accuracy.append(check_accuracy(network, X_test, y_test))
+        if prev_loss < test_loss:
+            loss_rise_count += 1
+            if loss_rise_count >= stop_threshold:
+                break
+        else:
+            best_network = copy.deepcopy(network)
+            loss_rise_count = 0
+        prev_loss = test_loss
     print(f"Train set size: {X_train.shape[0]}, Test set size: {X_test.shape[0]}")
     print(f"hidden_layers: {hidden_layers}\nlayer_size: {layer_size}\n"
           f"learning_rate: {learning_rate}\ninit_type: {init_type}\nbatch_size: {batch_size}")
