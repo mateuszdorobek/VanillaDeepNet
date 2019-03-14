@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import layer
 from sklearn.datasets import fetch_openml
 from sklearn.model_selection import train_test_split
+from imgaug import augmenters as iaa
 
 digits_nr = 10
 epochs = 10
@@ -50,6 +51,33 @@ def pickle_mnist():
     pickling_on.close()
     print("Pickling done")
 
+seq = iaa.Sequential([
+    # Scale/zoom them, translate/move them, rotate them and shear them.
+    iaa.Affine(
+        scale={"x": (0.85, 1.15), "y": (0.85, 1.15)},
+        translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)},
+        rotate=(-8, 8),
+        shear=(-3, 3)
+    )
+])
+
+
+def augment(x, img_shape):
+    assert (x.shape[1] == img_shape[0] * img_shape[1])
+    x_arr = x.reshape(x.shape[0], img_shape[0], img_shape[1])
+    x_aug = seq.augment_images(x_arr)
+    # plt.imshow(x_aug[0])
+    # plt.show()
+    return x_aug.reshape(x_aug.shape[0], img_shape[0] * img_shape[1])
+
+
+# %%
+X_train, X_test, y_train, y_test = load_mnist()
+# %%
+tmp = augment(X_train, (28, 28))
+# %%
+
+if __name__ == "__main__":
 
 def unpickle_mnist():
     pickle_off = open("mnist.pickle", "rb")
@@ -91,6 +119,7 @@ if __name__ == "__main__":
     train_loss_values = []
     test_loss_values = []
     accuracy = []
+    loss_values = []
     for epoch in range(epochs):
         print(f"epoch: {epoch + 1}")
         for i in range(X_train.shape[0]):
