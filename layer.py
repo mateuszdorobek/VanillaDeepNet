@@ -14,26 +14,28 @@ def d_tanh(x) -> np.ndarray:
     return 1 - (np.tanh(x) ** 2)
 
 
-def initialize_wages(in_size, layer_size) -> np.ndarray:
-    return np.random.rand(in_size, layer_size) / layer_size
-
-
-def initialize_bias(layer_size) -> np.ndarray:
-    return np.array(np.random.rand(layer_size, 1) / layer_size)
+def init_wages(in_size, layer_size, init_type="Default") -> (np.ndarray, np.ndarray):
+    wages_init = np.random.rand(in_size, layer_size)
+    bias_init = np.random.rand(layer_size, 1)
+    if init_type == "Default":
+        wages_init *= 1/layer_size
+    if init_type == "Xavier":
+        wages_init *= np.sqrt(1/in_size)
+        bias_init *= np.sqrt(1/in_size)
+    return wages_init, bias_init
 
 
 class Layer:
-    def __init__(self, hidden_layers, input_size, layer_size, output_size, learning_rate):
+    def __init__(self, hidden_layers, input_size, layer_size, output_size, learning_rate, init_type="Default"):
         self.learning_rate = learning_rate
-        self.w = initialize_wages(input_size, layer_size)
-        self.b = initialize_bias(layer_size)
+        self.w, self.b = init_wages(input_size, layer_size, init_type=init_type)
         self.gw = np.zeros_like(self.w)
         self.gb = np.zeros_like(self.b)
         hidden_layers -= 1
         if hidden_layers > 0:
-            self.nextLayer = Layer(hidden_layers - 1, layer_size, layer_size, output_size, learning_rate)
+            self.nextLayer = Layer(hidden_layers - 1, layer_size, layer_size, output_size, learning_rate, init_type)
         else:
-            self.nextLayer = OutLayer(layer_size, output_size, learning_rate)
+            self.nextLayer = OutLayer(layer_size, output_size, learning_rate, init_type)
 
     def teach(self, a_in, t) -> np.ndarray:
         z = self.w.T @ a_in + self.b
@@ -103,10 +105,9 @@ class Layer:
 
 
 class OutLayer:
-    def __init__(self, in_size, layer_size, learning_rate):
+    def __init__(self, input_size, layer_size, learning_rate, init_type="Default"):
         self.learning_rate = learning_rate
-        self.w = initialize_wages(in_size, layer_size)
-        self.b = initialize_bias(layer_size)
+        self.w, self.b = init_wages(input_size, layer_size, init_type=init_type)
         self.gw = np.zeros_like(self.w)
         self.gb = np.zeros_like(self.b)
 
