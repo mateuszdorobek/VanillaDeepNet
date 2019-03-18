@@ -7,17 +7,18 @@ import copy
 from sklearn.datasets import fetch_openml
 from sklearn.model_selection import train_test_split
 from imgaug import augmenters as iaa
+import math
 
 digits_nr = 10
-epochs = 25
+epochs = 4
 batch_size = 16
 learning_rate = 0.005
-layer_size = 128
-hidden_layers = 3
+layer_size = 64
+hidden_layers = 2
 augment_times = 4
 stop_threshold = 8
 init_type = "Default"
-optimizer = "Adam"
+optimizer = "Default"
 
 
 def load_mnist():
@@ -95,14 +96,20 @@ def unpickle_mnist(file_name, size):
     return X_train, X_test, y_train, y_test
 
 
-def confusion_matrix(network, X, y):
+def confusion(network, X, y) -> (np.array, list):
+    wrong_list = [[] for i in range(10)]
     y_pred = pd.Series(copy.copy(y), dtype=int, name="Predicted")  # copying y works as prealocation
     for i in range(X.shape[0]):
         x = np.array([X[i]]).T
         predicted = np.argmax(network.classify(x))
         y_pred.set_value(i, predicted)
     y_actu = pd.Series(y, name="Actual")
-    return pd.crosstab(y_actu, y_pred)
+    wrong_pred_mask = y_actu != y_pred
+    X_wrong = X[wrong_pred_mask]
+    y_wrong = y_pred[wrong_pred_mask]
+    for wrong in zip(y_wrong, X_wrong):
+        wrong_list[wrong[0]].append(wrong[1].reshape(28, 28))
+    return pd.crosstab(y_actu, y_pred), wrong_list
 
 
 def check_accuracy(network, X_test, y_test):
@@ -130,11 +137,30 @@ def unpickle_network(file_name):
     return net
 
 
+def plot_wrong(wrong_list):
+    columns = 8
+    fig_width = 8
+    for digit in range(len(wrong_list)):
+        rows = math.ceil(len(wrong_list[digit]) / columns)
+        fig_height = fig_width * (rows / columns)
+        fig = plt.figure(figsize=(fig_width, fig_height))
+        fig.suptitle(f"Cyfry uznane za {digit}", fontsize=10)
+        i = 1
+        for image in wrong_list[digit]:
+            fig.add_subplot(rows, columns, i)
+            i += 1
+            plt.imshow(image)
+            plt.axis('off')
+        fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+        plt.subplots_adjust(top=0.85)
+        plt.show()
+
+
 if __name__ == "__main__":
     # if you want to perform loading data faster pickle database first
     # and then use pickled binary file (unpickle_mnist)
     # pickle_mnist("mnist.pickle")
-    X_train, X_test, y_train, y_test = unpickle_mnist("mnist.pickle", 1_000)
+    X_train, X_test, y_train, y_test = unpickle_mnist("mnist.pickle", 1000)
     X_train, y_train = augment(X_train, y_train, (28, 28), augment_times)
     # plt.imshow(X_train[201].reshape(28, 28))
     # plt.show()
@@ -185,7 +211,9 @@ if __name__ == "__main__":
     print(f"train loss: {train_loss_values[-1].item()}")
     print(f"test loss: {test_loss_values[-1].item()}")
     print(f"accuracy: {accuracy[-1]}")
-    print(f"confusion matrix:\n{confusion_matrix(network, X_test, y_test)}")
+    confusion_matrix, wrong_list = confusion(network, X_test, y_test)
+    print(f"confusion matrix:\n{confusion_matrix}")
+    plot_wrong(wrong_list)
 
     plt.subplot(211)
     plt.plot(train_loss_values, linestyle='-.', label='training')
