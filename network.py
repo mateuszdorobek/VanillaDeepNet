@@ -9,14 +9,15 @@ from sklearn.model_selection import train_test_split
 from imgaug import augmenters as iaa
 
 digits_nr = 10
-epochs = 100
-batch_size = 64
+epochs = 25
+batch_size = 16
 learning_rate = 0.005
 layer_size = 128
 hidden_layers = 3
 augment_times = 4
-stop_threshold = 3
+stop_threshold = 8
 init_type = "Default"
+optimizer = "Adam"
 
 
 def load_mnist():
@@ -47,10 +48,10 @@ def check_loss(network, x_check_cost, y_check_cost):
     return mean_loss / x_check_cost.shape[0]
 
 
-def pickle_mnist():
+def pickle_mnist(file_name):
     print("Pickling MNIST...")
     mnist = fetch_openml('mnist_784', cache=False)
-    pickling_on = open("mnist.pickle", "wb")
+    pickling_on = open(file_name, "wb")
     pickle.dump(mnist, pickling_on)
     pickling_on.close()
     print("Pickling done")
@@ -77,27 +78,25 @@ def augment(X, y, img_shape, augment_times) -> (np.ndarray, np.ndarray):
     for i in range(1, augment_times):
         X_aug_arr = seq.augment_images(X_arr)
         X_aug_vec = X_aug_arr.reshape(X_aug_arr.shape[0], img_shape[0] * img_shape[1])
-        # X_augmented.append(X_aug_vec)
-        # y_augmented.append(y)
-        X_augmented[i * X.shape[0]: (i+1) * X.shape[0], :] = X_aug_vec
-        y_augmented[i * y.shape[0]: (i+1) * y.shape[0]] = y
+        X_augmented[i * X.shape[0]: (i + 1) * X.shape[0], :] = X_aug_vec
+        y_augmented[i * y.shape[0]: (i + 1) * y.shape[0]] = y
     return X_augmented, y_augmented
 
 
-def unpickle_mnist():
-    pickle_off = open("mnist.pickle", "rb")
+def unpickle_mnist(file_name, size):
+    pickle_off = open(file_name, "rb")
     mnist = pickle.load(pickle_off)
     pickle_off.close()
     x = mnist.data.astype('float32')
     y = mnist.target.astype('int64')
     x /= 255.0
-    X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.20, random_state=17)
-    assert (X_train.shape[0] + X_test.shape[0] == mnist.data.shape[0])
-    return X_train[0:4000], X_test, y_train[0:4000], y_test
+    X_train, X_test, y_train, y_test = train_test_split(x[0:size], y[0:size], test_size=0.20, random_state=17)
+    assert (X_train.shape[0] + X_test.shape[0] == size)
+    return X_train, X_test, y_train, y_test
 
 
 def confusion_matrix(network, X, y):
-    y_pred = pd.Series(copy.copy(y), dtype=int, name="Predicted") # copying y works as prealocation
+    y_pred = pd.Series(copy.copy(y), dtype=int, name="Predicted")  # copying y works as prealocation
     for i in range(X.shape[0]):
         x = np.array([X[i]]).T
         predicted = np.argmax(network.classify(x))
@@ -116,20 +115,37 @@ def check_accuracy(network, X_test, y_test):
     return true_positive_counter / X_test.shape[0]
 
 
+def pickle_network(network, file_name):
+    print("Pickling Network...")
+    pickling_on = open(file_name, "wb")
+    pickle.dump(network, pickling_on)
+    pickling_on.close()
+    print("Pickling done")
+
+
+def unpickle_network(file_name):
+    pickle_off = open(file_name, "rb")
+    net = pickle.load(pickle_off)
+    pickle_off.close()
+    return net
+
+
 if __name__ == "__main__":
     # if you want to perform loading data faster pickle database first
     # and then use pickled binary file (unpickle_mnist)
-    # pickle_mnist()
-    X_train, X_test, y_train, y_test = unpickle_mnist()
-    # plt.imshow(X_train[0].reshape(28, 28))
-    # X_train, X_test, y_train, y_test = load_mnist()
+    # pickle_mnist("mnist.pickle")
+    X_train, X_test, y_train, y_test = unpickle_mnist("mnist.pickle", 1_000)
     X_train, y_train = augment(X_train, y_train, (28, 28), augment_times)
+    # plt.imshow(X_train[201].reshape(28, 28))
+    # plt.show()
+    # X_train, X_test, y_train, y_test = load_mnist()
     network = layer.Layer(hidden_layers=hidden_layers,
                           input_size=X_train.shape[1],
                           layer_size=layer_size,
                           output_size=digits_nr,
                           learning_rate=learning_rate,
                           init_type=init_type)
+    # network = unpickle_network("network.pickle")
     print("Training Loop:")
     train_loss_values = []
     test_loss_values = []
@@ -146,20 +162,23 @@ if __name__ == "__main__":
             x = np.array([X_train[i]]).T
             network.teach(x, t)
             if (i + 1) % batch_size == 0:
-                network.apply_gradients()
+                network.apply_gradients(optimizer=optimizer)
         train_loss_values.append(check_loss(network, X_train, y_train))
+        print(f"train loss: {check_loss(network, X_train, y_train)}")
         test_loss = check_loss(network, X_test, y_test)
         test_loss_values.append(test_loss)
         accuracy.append(check_accuracy(network, X_test, y_test))
         if prev_loss < test_loss:
             loss_rise_count += 1
             if loss_rise_count >= stop_threshold:
-                print(f"Stopping because of reaching criterion in {epoch} epoch.")
                 break
         else:
             best_network = copy.deepcopy(network)
             loss_rise_count = 0
         prev_loss = test_loss
+
+    pickle_network(network, "network.pickle")
+
     print(f"Train set size: {X_train.shape[0]}, Test set size: {X_test.shape[0]}")
     print(f"hidden_layers: {hidden_layers}\nlayer_size: {layer_size}\n"
           f"learning_rate: {learning_rate}\ninit_type: {init_type}\nbatch_size: {batch_size}")
@@ -171,6 +190,7 @@ if __name__ == "__main__":
     plt.subplot(211)
     plt.plot(train_loss_values, linestyle='-.', label='training')
     plt.plot(test_loss_values, linestyle='-', label='test')
+    plt.legend()
     plt.ylabel('loss')
     plt.xlabel('epochs')
     plt.subplot(212)
