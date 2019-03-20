@@ -171,7 +171,7 @@ def roc_curves(network, X, y):
         roc_auc = auc(fpr, tpr)
         plt.plot(fpr, tpr, lw=2, alpha=0.9, color='r', label='ROC curve')
         plt.plot([0, 1], [0, 1], linestyle='--', lw=1, color='g', label='Random classifier', alpha=0.4)
-        plt.title(f"ROC curve for digit {i}, AOC = {roc_auc}")
+        plt.title(f"ROC curve for digit {i}, AUC = {roc_auc}")
         plt.legend(loc='lower right')
         plt.show()
 
