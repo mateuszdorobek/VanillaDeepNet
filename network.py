@@ -6,17 +6,18 @@ import layer
 import copy
 from sklearn.datasets import fetch_openml
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_curve, auc
 from imgaug import augmenters as iaa
 import math
 
 digits_nr = 10
-epochs = 4
-batch_size = 16
+epochs = 20
+batch_size = 64
 learning_rate = 0.005
-layer_size = 64
-hidden_layers = 2
+layer_size = 128
+hidden_layers = 3
 augment_times = 4
-stop_threshold = 8
+stop_threshold = 3
 init_type = "Default"
 optimizer = "Default"
 
@@ -156,11 +157,31 @@ def plot_wrong(wrong_list):
         plt.show()
 
 
+def roc_curves(network, X, y):
+    preds = np.empty((X.shape[0], digits_nr))
+    print(preds.shape)
+    for i in range(X.shape[0]):
+        x = np.array([X[i]]).T
+        pred = network.classify(x)
+        preds[i, :] = pred.flatten()
+    for i in range(digits_nr):
+        digit_pred = preds[:, i]
+        y_expected = y == i
+        fpr, tpr, thresholds = roc_curve(y_expected, digit_pred)
+        roc_auc = auc(fpr, tpr)
+        plt.plot(fpr, tpr, lw=2, alpha=0.9, color='r', label='ROC curve')
+        plt.plot([0, 1], [0, 1], linestyle='--', lw=1, color='g', label='Random classifier', alpha=0.4)
+        plt.title(f"ROC curve for digit {i}, AOC = {roc_auc}")
+        plt.legend(loc='lower right')
+        plt.show()
+
+
+
 if __name__ == "__main__":
     # if you want to perform loading data faster pickle database first
     # and then use pickled binary file (unpickle_mnist)
     # pickle_mnist("mnist.pickle")
-    X_train, X_test, y_train, y_test = unpickle_mnist("mnist.pickle", 1000)
+    X_train, X_test, y_train, y_test = unpickle_mnist("mnist.pickle", 2_000)
     X_train, y_train = augment(X_train, y_train, (28, 28), augment_times)
     # plt.imshow(X_train[201].reshape(28, 28))
     # plt.show()
@@ -212,8 +233,9 @@ if __name__ == "__main__":
     print(f"test loss: {test_loss_values[-1].item()}")
     print(f"accuracy: {accuracy[-1]}")
     confusion_matrix, wrong_list = confusion(network, X_test, y_test)
+    roc_curves(network, X_test, y_test)
     print(f"confusion matrix:\n{confusion_matrix}")
-    plot_wrong(wrong_list)
+    # plot_wrong(wrong_list)
 
     plt.subplot(211)
     plt.plot(train_loss_values, linestyle='-.', label='training')
